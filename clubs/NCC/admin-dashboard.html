@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="../../scripts/admin-dashboard.js"></script>
+    <link rel="stylesheet" href="../../styles/admin-dashboard.css">
+</head>
+<body>
+
+    <!-- Main Navbar -->
+    <nav class="main-nav">
+        <div class="left">Admin Dashboard</div>
+        <div class="right">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Sub Navbar -->
+    <nav class="sub-nav">
+        <a href="admin-dashboard.html" class="sub-nav-item" onclick="showDashboard()">Dashboard</a>
+        <a href="admin-announcements.html" class="sub-nav-item">Announcements</a>
+        <a href="#" class="sub-nav-item" onclick="showMembers()">Members</a>
+        <a href="admin-profile.html" class="sub-nav-item">Settings</a>
+    </nav>
+
+    <!-- Admin Details Section -->
+    <div class="admin-info">
+        <img id="adminPhoto" class="admin-photo" src="../../images/akhil.jpg" alt="Admin Photo">
+        <div class="admin-details">
+            <h2>Welcome...</h2>
+            <p><strong>Name:</strong> <span id="adminFullName"></span></p>
+            <p><strong>Email:</strong> <span id="adminEmail"></span></p>
+            <p><strong>Club:</strong> <span id="adminClub"></span></p>
+        </div>
+    </div>
+
+    <!-- Club Members Section -->
+    <div class="members-container">
+        <h2>Club Members</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="members-list">
+                    <!-- Members will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        <p>Total Members: <span id="member-count">0</span></p>
+    </div>
+
+    <script type="module">
+        import { database, auth } from "../../scripts/firebase-config.js";
+        import { ref, get, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    
+        document.addEventListener("DOMContentLoaded", async function () {
+            const userName = sessionStorage.getItem("userName");
+            const userRole = sessionStorage.getItem("userRole");
+            const userClub = sessionStorage.getItem("userClub");
+            let userEmail = sessionStorage.getItem("userEmail");
+            let userPhoto = sessionStorage.getItem("userPhoto");
+    
+            if (!userName || userRole !== "admin" || !userClub) {
+                window.location.href = "../../login.html";
+                return;
+            }
+    
+            document.getElementById("adminFullName").innerText = userName;
+            document.getElementById("adminEmail").innerText = userEmail || "Loading...";
+            document.getElementById("adminClub").innerText = userClub;
+    
+            if (!userEmail) {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userEmail = user.email;
+                        sessionStorage.setItem("userEmail", userEmail);
+                        document.getElementById("adminEmail").innerText = userEmail;
+                    }
+                });
+            }
+    
+            if (userPhoto) {
+                document.getElementById("adminPhoto").src = userPhoto;
+            }
+    
+            fetchClubData(userClub);
+        });
+    
+        async function fetchClubData(club) {
+            const membersRef = ref(database, "users");
+            try {
+                const snapshot = await get(membersRef);
+                let members = [];
+                snapshot.forEach(childSnapshot => {
+                    const userData = childSnapshot.val();
+                    if (userData.club === club && userData.role === "user") {
+                        members.push({ id: childSnapshot.key, ...userData });
+                    }
+                });
+    
+                document.getElementById("member-count").innerText = members.length;
+                const membersList = document.getElementById("members-list");
+                membersList.innerHTML = ""; // Clear existing data
+    
+                members.forEach(member => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${member.name}</td>
+                        <td>${member.email}</td>
+                        <td>${member.phone || "No phone"}</td>
+                        <td><button class="remove-btn" onclick="removeMember('${member.id}')">Remove</button></td>
+                    `;
+                    membersList.appendChild(row);
+                });
+    
+            } catch (error) {
+                console.error("Error fetching members:", error);
+                alert("Failed to fetch members.");
+            }
+        }
+    
+        window.removeMember = async (userId) => {
+            if (confirm("Are you sure you want to remove this member?")) {
+                try {
+                    await remove(ref(database, `users/${userId}`));
+                    alert("Member removed successfully!");
+                    fetchClubData(sessionStorage.getItem("userClub")); // Refresh list
+                } catch (error) {
+                    console.error("Error removing member:", error);
+                    alert("Failed to remove member.");
+                }
+            }
+        };
+    
+        window.logout = () => signOut(auth).then(() => location.href = "../../login.html");
+    
+    </script>
+    
+
+</body>
+</html>
