@@ -1,0 +1,182 @@
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  line-height: 1.6;
+  background-color: #f8f4e1;
+  color: #333;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #6a0dad;
+  padding: 1rem;
+  color: white;
+}
+
+.navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 10px; /* Add gap between navigation items */
+}
+
+.navbar ul li a {
+  color: white;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  transition: background-color 0.3s;
+  border-radius: 20px; /* Add rounded corners */
+}
+
+.navbar ul li a:hover {
+  background-color: #501a8b;
+}
+
+.search-box {
+  padding: 0.5rem;
+  border-radius: 20px;
+  border: none;
+  margin-right: 1rem; /* Add spacing between search box and auth buttons */
+}
+
+.auth-buttons a {
+  margin-left: 1rem;
+  padding: 0.5rem 1rem;
+  color: white;
+  background-color: #501a8b;
+  text-decoration: none;
+  border-radius: 20px;
+  transition: background-color 0.3s;
+}
+
+.auth-buttons a:hover {
+  background-color: #3b1466;
+}
+
+/* Hero Section */
+.hero {
+  height: 750px;
+  background: url("/images/cmrec-1.jpg") center/cover no-repeat;
+  position: relative;
+  opacity: 80%;
+}
+
+.overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #9c0085;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add text shadow for better readability */
+}
+
+.overlay h2 {
+  font-size: 3rem;
+  margin-bottom: 1rem; /* Add spacing below the heading */
+}
+
+.explore-btn {
+  padding: 0.7rem 2rem;
+  margin-top: 1rem;
+  background-color: #6a0dad;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.explore-btn:hover {
+  background-color: #501a8b;
+}
+
+/* Events Section */
+.events {
+  text-align: center;
+  padding: 2rem;
+  background-color: white; /* Add background color for contrast */
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: #6a0dad;
+  color: white;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  /* Navbar adjustments for mobile */
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 0.5rem;
+  }
+
+  .navbar ul {
+    flex-direction: column;
+    width: 100%;
+    gap: 5px; /* Reduce gap for mobile */
+  }
+
+  .navbar ul li a {
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .search-box {
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+
+  .auth-buttons {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .auth-buttons a {
+    margin: 0 0.5rem;
+  }
+
+  /* Hero Section adjustments for mobile */
+  .hero {
+    height: 500px; /* Reduce height for mobile */
+  }
+
+  .overlay h2 {
+    font-size: 2rem; /* Reduce font size for mobile */
+  }
+
+  .explore-btn {
+    padding: 0.5rem 1.5rem; /* Adjust button size for mobile */
+  }
+
+  /* Events Section adjustments for mobile */
+  .events {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Further adjustments for very small screens */
+  .overlay h2 {
+    font-size: 1.5rem; /* Further reduce font size */
+  }
+
+  .explore-btn {
+    padding: 0.5rem 1rem; /* Smaller button for very small screens */
+  }
+}

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Club Announcements</title>
+    <link rel="stylesheet" href="../../styles/admin-announcements.css">
+  
+</head>
+<body>
+    <!-- Main Navigation -->
+    <nav class="main-nav">
+        <div class="left">Admin</div>
+        <div class="right">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Sub Navigation -->
+    <nav class="sub-nav">
+        <a href="admin-dashboard.html" class="sub-nav-item">Dashboard</a>
+        <a href="admin-announcements.html" class="sub-nav-item active">Announcements</a>
+        <a href="#" class="sub-nav-item" onclick="showMembers()">Members</a>
+        <a href="admin-profile.html" class="sub-nav-item">Settings</a>
+    </nav>
+
+    <div class="container">
+        <!-- Left Panel - Create Announcement -->
+        <div class="left-panel">
+            <h2>Create Announcement</h2>
+            <form id="announcementForm">
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="content">Content</label>
+                    <textarea id="content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="tags">Tags (comma separated)</label>
+                    <input type="text" id="tags">
+                </div>
+                <div class="pinned-checkbox">
+                    <input type="checkbox" id="pinned">
+                    <label for="pinned">Pin this announcement</label>
+                </div>
+                <button type="submit">Publish Announcement</button>
+            </form>
+        </div>
+
+        <!-- Right Panel - Announcements List -->
+        <div class="right-panel">
+            <div class="right-panel-header">
+                Announcements
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search announcements...">
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="pinned">Pinned</button>
+                    </div>
+                </div>
+            </div>
+            <div class="announcements-list" id="announcementsContainer">
+                <p>Loading announcements...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyCJ9vaClojHn_IIY2YC8XOBlY7JtHmt5vM",
+          authDomain: "check-e4504.firebaseapp.com",
+          databaseURL: "https://check-e4504-default-rtdb.firebaseio.com",
+          projectId: "check-e4504",
+          storageBucket: "check-e4504.appspot.com",
+          messagingSenderId: "753492063096",
+          appId: "1:753492063096:web:e499ee4f211f8f9f82ce8d",
+          measurementId: "G-5TRQEHS5WM"
+      };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const firestore = firebase.firestore();
+        const rtdb = firebase.database();
+      
+        let currentUser = null;
+        let adminClub = null;
+      
+        // Optional: Enable multi-tab offline persistence safely
+        firestore.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+          if (err.code === 'failed-precondition') {
+            console.warn('Persistence failed: Multiple tabs open');
+          } else if (err.code === 'unimplemented') {
+            console.warn('Browser does not support persistence');
+          }
+        });
+      
+        auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            currentUser = user;
+            await loadAdminClub(user.uid);
+            setupAnnouncementsListener();  // now safe!
+            setupFormSubmit();
+          } else {
+            window.location.href = '/login';
+          }
+        });
+      
+        async function loadAdminClub(uid) {
+          try {
+            const snapshot = await rtdb.ref(`users/${uid}`).once('value');
+            const userData = snapshot.val();
+            adminClub = userData?.club || null;
+          } catch (error) {
+            console.error('Error loading club:', error);
+          }
+        }
+      
+        function setupAnnouncementsListener() {
+          if (!adminClub) {
+            console.warn("Admin club info not loaded yet.");
+            return;
+          }
+      
+          try {
+            firestore.collection('announcements')
+              .where('club', '==', adminClub)
+              .orderBy('timestamp', 'desc')
+              .onSnapshot((snapshot) => {
+                const announcements = snapshot.docs.map(doc => doc.data());
+                console.log("📢 Announcements:", announcements);
+                // renderAnnouncements(announcements); // <- Your render function here
+              }, (error) => {
+                console.error("Snapshot listener error:", error);
+                alert("⚠️ Failed to load announcements.");
+              });
+          } catch (err) {
+            console.error("Error setting up snapshot listener:", err);
+          }
+        }
+      
+        function setupFormSubmit() {
+          document.getElementById('announcementForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!adminClub) return alert('Club info not available');
+      
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
+            const pinned = document.getElementById('pinned').checked;
+      
+            if (!title || !content) return alert('Please fill in all fields');
+      
+            try {
+              await firestore.collection('announcements').add({
+                title,
+                content,
+                tags: tags.length ? tags : ['general'],
+                club: adminClub,
+                pinned,
+                author: currentUser.displayName || 'Admin',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              });
+      
+              e.target.reset();
+              alert('✅ Announcement published!');
+            } catch (error) {
+              console.error('Error publishing announcement:', error);
+              alert('❌ Failed to publish');
+            }
+          });
+        }
+
+        function setupAnnouncementsListener() {
+            const container = document.getElementById('announcementsContainer');
+            firestore.collection('announcements')
+                .where('club', '==', adminClub)
+                .orderBy('pinned', 'desc')
+                .orderBy('timestamp', 'desc')
+                .onSnapshot(snapshot => {
+                    container.innerHTML = snapshot.empty ? '<p>No announcements</p>' : '';
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        container.innerHTML += `
+                            <div class="announcement-card ${data.pinned ? 'pinned' : ''}">
+                                ${data.pinned ? '<div class="pinned-badge">Pinned</div>' : ''}
+                                <h3>${data.title}</h3>
+                                <p>${data.content}</p>
+                                <div class="tags">${data.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>
+                                <div class="meta-info">
+                                    <strong>${data.author}</strong> | 
+                                    ${data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A'}
+                                </div>
+                            </div>`;
+                    });
+                });
+        }
+
+        // Search and Filter Functionality
+        const searchInput = document.getElementById('searchInput');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+
+        function filterAnnouncements() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filterType = document.querySelector('.filter-btn.active').dataset.filter;
+            
+            document.querySelectorAll('.announcement-card').forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                const content = card.querySelector('p').textContent.toLowerCase();
+                const isPinned = card.classList.contains('pinned');
+                
+                const matchesSearch = title.includes(searchTerm) || content.includes(searchTerm);
+                const matchesFilter = filterType === 'all' || (filterType === 'pinned' && isPinned);
+                
+                card.style.display = (matchesSearch && matchesFilter) ? 'block' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterAnnouncements);
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.filter-btn.active').classList.remove('active');
+                btn.classList.add('active');
+                filterAnnouncements();
+            });
+        });
+
+        // Logout Function
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = '/login.html';
+            });
+        }
+    </script>
+</body>
+</html>
